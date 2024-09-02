@@ -4820,6 +4820,7 @@ broken_move (rtx_insn *insn)
 		   we changed this to do a constant load.  In that case
 		   we don't have an r0 clobber, hence we must use fldi.  */
 		&& (TARGET_FMOVD
+		    || sh_lra_p ()
 		    || (GET_CODE (XEXP (XVECEXP (PATTERN (insn), 0, 2), 0))
 			== SCRATCH))
 		&& REG_P (SET_DEST (pat))
