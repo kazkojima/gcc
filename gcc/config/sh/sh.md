@@ -6255,7 +6255,8 @@
   prepare_move_operands (operands, SFmode);
   if (TARGET_SH2E)
     {
-      if (lra_in_progress)
+      if (lra_in_progress &&
+          !(REG_P (operands[0]) && REG_P (operands[1])))
 	{
 	  if (GET_CODE (operands[0]) == SCRATCH)
 	    DONE;
