@@ -4801,7 +4801,38 @@
 
 (define_expand "extend<mode>si2"
   [(set (match_operand:SI 0 "arith_reg_dest")
-	(sign_extend:SI (match_operand:QIHI 1 "general_extend_operand")))])
+	(sign_extend:SI (match_operand:QIHI 1 "general_extend_operand")))]
+  ""
+{
+  /* When the displacement addressing is used, RA will assign r0 to
+       the pseudo register operand for the QI/HImode load.  See
+       the comment in sh.cc:prepare_move_operand and PR target/55212.  */
+  if (! lra_in_progress && ! reload_completed
+      && sh_lra_p ()
+      && ! TARGET_SH2A
+      && arith_reg_dest (operands[0], <MODE>mode)
+      && short_displacement_mem_operand (operands[1], <MODE>mode))
+    {
+      emit_insn (gen_extend<mode>si2_short_mem_disp_z (operands[0],
+													     operands[1]));
+      DONE;
+    }
+})
+
+(define_insn_and_split "extend<mode>si2_short_mem_disp_z"
+  [(set (match_operand:SI 0 "arith_reg_dest" "=r")
+	(sign_extend:SI
+	    (match_operand:QIHI 1 "short_displacement_mem_operand" "m")))
+   (clobber (reg:SI R0_REG))]
+  "TARGET_SH1 && ! TARGET_SH2A && sh_lra_p ()"
+  "#"
+  "&& 1"
+  [(set (match_dup 2) (sign_extend:SI (match_dup  1)))
+   (set (match_dup 0) (match_dup 2))]
+{
+  operands[2] = gen_rtx_REG (SImode, R0_REG);
+}
+  [(set_attr "type" "load")])
 
 (define_insn_and_split "*extend<mode>si2_compact_reg"
   [(set (match_operand:SI 0 "arith_reg_dest" "=r")
@@ -5343,8 +5374,47 @@
         operands[1] = gen_lowpart (<MODE>mode, reg);
     }
 
+  if (! lra_in_progress && ! reload_completed
+      && sh_lra_p ()
+      && ! TARGET_SH2A
+      && arith_reg_operand (operands[1], <MODE>mode)
+      && satisfies_constraint_Sid (operands[0]))
+    {
+      rtx adr = XEXP (operands[0], 0);
+      rtx base = XEXP (adr, 0);
+      rtx idx = XEXP (adr, 1);
+      emit_insn (gen_mov<mode>_store_mem_index (base, idx,
+												      operands[1]));
+      DONE;
+    }
+
   prepare_move_operands (operands, <MODE>mode);
 })
+
+(define_insn "*mov<mode>_store_mem_index"
+  [(set (mem:QIHI
+		(plus:SI (match_operand:SI 0 "arith_reg_operand" "%r")
+			       (reg:SI R0_REG)))
+	   (match_operand:QIHI 1 "arith_reg_operand" "r"))]
+  "TARGET_SH1 && ! TARGET_SH2A && sh_lra_p ()"
+  "mov.<bw>	%1,@(r0,%0)"
+  [(set_attr "type" "store")])
+
+(define_insn_and_split "mov<mode>_store_mem_index"
+  [(set (mem:QIHI
+		(plus:SI (match_operand:SI 0 "arith_reg_operand" "%r")
+			       (match_operand:SI 1 "arith_reg_operand" "^zr")))
+	   (match_operand:QIHI 2 "arith_reg_operand" "r"))
+   (clobber (reg:SI R0_REG))]
+  "TARGET_SH1 && ! TARGET_SH2A && sh_lra_p ()"
+  "#"
+  "&& 1"
+  [(set (match_dup 3) (match_dup 1))
+    (set (mem:QIHI (plus:SI (match_dup 0) (match_dup 3))) (match_dup 2))]
+{
+  operands[3] = gen_rtx_REG (SImode, R0_REG);
+}
+  [(set_attr "type" "store")])
 
 ;; The pre-dec and post-inc mems must be captured by the '<' and '>'
 ;; constraints, otherwise wrong code might get generated.
