@@ -116,6 +116,14 @@ expand_block_move (rtx *operands)
 	  force_into (XEXP (operands[0], 0), r4);
 	  force_into (XEXP (operands[1], 0), r5);
 	  emit_insn (gen_block_move_real_i4 (func_addr_rtx, lab));
+	  if (sh_lra_p ())
+	    {
+	      emit_clobber (gen_rtx_REG (SImode, PR_REG));
+	      emit_clobber (gen_rtx_REG (SImode, T_REG));
+	      emit_clobber (gen_rtx_REG (SImode, R0_REG));
+	      emit_clobber (gen_rtx_REG (SImode, R1_REG));
+	      emit_clobber (gen_rtx_REG (SImode, R2_REG));
+	    }
 	  return true;
 	}
       else if (! optimize_size)
@@ -135,6 +143,18 @@ expand_block_move (rtx *operands)
 	  int dwords = bytes >> 3;
 	  emit_insn (gen_move_insn (r6, GEN_INT (dwords - 1)));
 	  emit_insn (gen_block_lump_real_i4 (func_addr_rtx, lab));
+	  if (sh_lra_p ())
+	    {
+	      emit_clobber (gen_rtx_REG (SImode, PR_REG));
+	      emit_clobber (gen_rtx_REG (SImode, T_REG));
+	      emit_clobber (r4);
+	      emit_clobber (r5);
+	      emit_clobber (r6);
+	      emit_clobber (gen_rtx_REG (SImode, R0_REG));
+	      emit_clobber (gen_rtx_REG (SImode, R1_REG));
+	      emit_clobber (gen_rtx_REG (SImode, R2_REG));
+	      emit_clobber (gen_rtx_REG (SImode, R3_REG));
+	    }
 	  return true;
 	}
       else
@@ -152,6 +172,11 @@ expand_block_move (rtx *operands)
       force_into (XEXP (operands[0], 0), r4);
       force_into (XEXP (operands[1], 0), r5);
       emit_insn (gen_block_move_real (func_addr_rtx, lab));
+      if (sh_lra_p ())
+	{
+	  emit_clobber(gen_rtx_REG (SImode, PR_REG));
+	  emit_clobber(gen_rtx_REG (SImode, R0_REG));
+	}
       return true;
     }
 
@@ -179,6 +204,15 @@ expand_block_move (rtx *operands)
       while_loop = ((bytes / 4) / 16 - 1) * 16;
       emit_insn (gen_move_insn (r6, GEN_INT (while_loop + final_switch)));
       emit_insn (gen_block_lump_real (func_addr_rtx, lab));
+      if (sh_lra_p ())
+	{
+	  emit_clobber (gen_rtx_REG (SImode, PR_REG));
+	  emit_clobber (gen_rtx_REG (SImode, T_REG));
+	  emit_clobber (r4);
+	  emit_clobber (r5);
+	  emit_clobber (r6);
+	  emit_clobber (gen_rtx_REG (SImode, R0_REG));
+	}
       return true;
     }
 

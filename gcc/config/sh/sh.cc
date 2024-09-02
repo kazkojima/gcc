@@ -3883,6 +3883,11 @@ expand_ashiftrt (rtx *operands)
   sprintf (func, "__ashiftrt_r4_%d", value);
   rtx lab = function_symbol (wrk, func, SFUNC_STATIC).lab;
   emit_insn (gen_ashrsi3_n (GEN_INT (value), wrk, lab));
+  if (sh_lra_p ())
+    {
+      emit_clobber (gen_rtx_REG (SImode, PR_REG));
+      emit_clobber (gen_rtx_REG (SImode, T_REG));
+    }
   emit_move_insn (operands[0], gen_rtx_REG (SImode, 4));
   return true;
 }
