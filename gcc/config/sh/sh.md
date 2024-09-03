@@ -5495,10 +5495,11 @@
 (define_insn "*mov<mode>_store_mem_index"
   [(set (mem:QIHI
 		(plus:SI (match_operand:SI 0 "arith_reg_operand" "%r")
-			       (reg:SI R0_REG)))
-	   (match_operand:QIHI 1 "arith_reg_operand" "r"))]
-  "TARGET_SH1 && ! TARGET_SH2A && sh_lra_p ()"
-  "mov.<bw>	%1,@(r0,%0)"
+			       (match_operand:SI 1 "arith_reg_operand" "z")))
+	   (match_operand:QIHI 2 "arith_reg_operand" "r"))]
+  "TARGET_SH1 && ! TARGET_SH2A && sh_lra_p ()
+   && REG_P (operands[1]) && REGNO (operands[1]) == R0_REG"
+  "mov.<bw>	%2,@(%1,%0)"
   [(set_attr "type" "store")])
 
 (define_insn_and_split "mov<mode>_store_mem_index"
