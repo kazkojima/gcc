@@ -5479,7 +5479,8 @@
       && sh_lra_p ()
       && ! TARGET_SH2A
       && arith_reg_operand (operands[1], <MODE>mode)
-      && satisfies_constraint_Sid (operands[0]))
+      && (satisfies_constraint_Sid (operands[0])
+              || sh_satisfies_constraint_Sid_subreg_index (operands[0])))
     {
       rtx adr = XEXP (operands[0], 0);
       rtx base = XEXP (adr, 0);
