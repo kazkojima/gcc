@@ -11466,16 +11466,6 @@ sh_legitimize_address_displacement (rtx *offset1, rtx *offset2,
 bool
 sh_movsf_ie_ra_split_p (rtx op0, rtx op1, rtx op2)
 {
-  /* op0 == op1 */
-  if (rtx_equal_p (op0, op1))
-    return true;
-  /* fy, FQ, reg */
-  if (GET_CODE (op1) == CONST_DOUBLE
-      && ! satisfies_constraint_G (op1)
-      && ! satisfies_constraint_H (op1)
-      && REG_P (op0)
-      && REG_P (op2))
-    return true;
   /* f, r, y */
   if (REG_P (op0) && FP_REGISTER_P (REGNO (op0))
       && REG_P (op1) && GENERAL_REGISTER_P (REGNO (op1))

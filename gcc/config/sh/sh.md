@@ -6318,8 +6318,7 @@
 	(match_operand:SF 1 "general_movsrc_operand"
 				" f,r,G,H,FQ,m,f,FQ,m,r,y,f,>,fr,y,r,y,>,y"))
    (use (reg:SI FPSCR_MODES_REG))
-   (clobber (match_scratch:SF 2 "=r,r,X,X,&z,r,r, X,r,r,r,r,r, y,r,r,r,r,r"))
-   (const_int 0)]
+   (clobber (match_scratch:SF 2 "=f,r,X,X,&z,r,r, X,r,r,r,r,r, y,r,r,r,r,r"))]
   "TARGET_SH2E
    && (arith_reg_operand (operands[0], SFmode)
        || fpul_operand (operands[0], SFmode)
@@ -6406,12 +6405,24 @@
       (const_string "none")
       (const_string "none")])])
 
+(define_insn "movsf_ie_const_ra"
+  [(set (match_operand:SF 0 "fp_arith_reg_operand" "=f")
+	(match_operand:SF 1 "const_double_operand" "F"))
+   (use (reg:SI FPSCR_MODES_REG))
+   (clobber (reg:SI R0_REG))]
+  "TARGET_SH2E && sh_lra_p ()"
+  "#"
+  [(set_attr "type" "pcfload")
+   (set_attr "length" "4")])
+
 (define_split
   [(set (match_operand:SF 0 "register_operand" "")
 	(match_operand:SF 1 "register_operand" ""))
    (use (reg:SI FPSCR_MODES_REG))
    (clobber (reg:SI FPUL_REG))]
-  "TARGET_SH1"
+  "TARGET_SH1
+   && ! fpul_operand (operands[0], SFmode)
+   && ! fpul_operand (operands[1], SFmode)"
   [(parallel [(set (reg:SF FPUL_REG) (match_dup 1))
 	      (use (reg:SI FPSCR_MODES_REG))
 	      (clobber (scratch:SI))])
@@ -6436,6 +6447,15 @@
 	  emit_insn (gen_movsf_ie_ra (operands[0], operands[1]));
 	  DONE;
 	}
+      else if (sh_lra_p ()
+                   && GET_CODE (operands[1]) == CONST_DOUBLE
+		   &&  ! satisfies_constraint_G (operands[1])
+		   &&  ! satisfies_constraint_H (operands[1])
+		   && REG_P (operands[0]))
+        {
+          emit_insn (gen_movsf_ie_const_ra (operands[0], operands[1]));
+          DONE;
+        }
 
       emit_insn (gen_movsf_ie (operands[0], operands[1]));
       DONE;
