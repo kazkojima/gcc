@@ -11459,20 +11459,17 @@ sh_legitimize_address_displacement (rtx *offset1, rtx *offset2,
   return false;
 }
 
-/* Return true if movsf insn should be splited with an additional
-   register.  */
+/* Return true if movsf insn should be splited with fpul register.  */
 bool
-sh_movsf_ie_ra_split_p (rtx op0, rtx op1, rtx op2)
+sh_movsf_ie_y_split_p (rtx op0, rtx op1)
 {
-  /* f, r, y */
-  if (REG_P (op0) && FP_REGISTER_P (REGNO (op0))
-      && REG_P (op1) && GENERAL_REGISTER_P (REGNO (op1))
-      && REG_P (op2) && (REGNO (op2) == FPUL_REG))
+  /* f, r */
+  if (REG_P (op0)
+      && (SUBREG_P (op1) && GET_MODE (SUBREG_REG (op1)) == SImode))
     return true;
-  /* r, f, y */
-  if (REG_P (op1) && FP_REGISTER_P (REGNO (op1))
-      && REG_P (op0) && GENERAL_REGISTER_P (REGNO (op0))
-      && REG_P (op2) && (REGNO (op2) == FPUL_REG))
+  /* r, f */
+  if (REG_P (op1)
+      && (SUBREG_P (op0) && GET_MODE (SUBREG_REG (op0)) == SImode))
     return true;
 
   return false;
