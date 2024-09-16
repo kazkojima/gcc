@@ -2276,6 +2276,7 @@
 		 (match_operand:SI 2 "general_operand")))]
   ""
 {
+  rtx last;
   rtx func_ptr = gen_reg_rtx (Pmode);
 
   /* Emit the move of the address to a pseudo outside of the libcall.  */
@@ -2298,56 +2299,15 @@
 	  DONE;
 	}
       function_symbol (func_ptr, "__udivsi3_i4i", SFUNC_GOT);
-      emit_move_insn (gen_rtx_REG (SImode, 4), operands[1]);
-      emit_move_insn (gen_rtx_REG (SImode, 5), operands[2]);
-      emit_insn (gen_udivsi3_i4_int (operands[0], func_ptr));
-      if (sh_lra_p ())
-	{
-	  emit_clobber (gen_rtx_REG (SImode, PR_REG));
-	  emit_clobber (gen_rtx_REG (SImode, T_REG));
-	  emit_clobber (gen_rtx_REG (SImode, R1_REG));
-	  emit_clobber (gen_rtx_REG (SImode, MACH_REG));
-	  emit_clobber (gen_rtx_REG (SImode, MACL_REG));
-	}
+      last = gen_udivsi3_i4_int (operands[0], func_ptr);
     }
   else if (TARGET_DIVIDE_CALL_FP)
     {
       rtx lab = function_symbol (func_ptr, "__udivsi3_i4", SFUNC_STATIC).lab;
-      emit_move_insn (gen_rtx_REG (SImode, 4), operands[1]);
-      emit_move_insn (gen_rtx_REG (SImode, 5), operands[2]);
       if (TARGET_FPU_SINGLE)
-	{
-	  emit_insn (gen_udivsi3_i4_single (operands[0], func_ptr, lab));
-          if (sh_lra_p ())
-	    {
-	      emit_clobber (gen_rtx_REG (SImode, PR_REG));
-	      emit_clobber (gen_rtx_REG (SImode, T_REG));
-	      emit_clobber (gen_rtx_REG (SImode, DR0_REG));
-	      emit_clobber (gen_rtx_REG (SImode, DR2_REG));
-	      emit_clobber (gen_rtx_REG (SImode, DR4_REG));
-	      emit_clobber (gen_rtx_REG (SImode, R0_REG));
-	      emit_clobber (gen_rtx_REG (SImode, R1_REG));
-	      emit_clobber (gen_rtx_REG (SImode, R4_REG));
-	      emit_clobber (gen_rtx_REG (SImode, R5_REG));
-	    }
-	}
+	last = gen_udivsi3_i4_single (operands[0], func_ptr, lab);
       else
-	{
-	  emit_insn (gen_udivsi3_i4 (operands[0], func_ptr, lab));
-          if (sh_lra_p ())
-	    {
-	      emit_clobber (gen_rtx_REG (SImode, PR_REG));
-	      emit_clobber (gen_rtx_REG (SImode, T_REG));
-	      emit_clobber (gen_rtx_REG (SImode, DR0_REG));
-	      emit_clobber (gen_rtx_REG (SImode, DR2_REG));
-	      emit_clobber (gen_rtx_REG (SImode, DR4_REG));
-	      emit_clobber (gen_rtx_REG (SImode, R0_REG));
-	      emit_clobber (gen_rtx_REG (SImode, R1_REG));
-	      emit_clobber (gen_rtx_REG (SImode, R4_REG));
-	      emit_clobber (gen_rtx_REG (SImode, R5_REG));
-	      emit_clobber (gen_rtx_REG (SImode, FPSCR_STAT_REG));
-	    }
-	}
+	last = gen_udivsi3_i4 (operands[0], func_ptr, lab);
     }
   else if (TARGET_SH2A)
     {
@@ -2359,17 +2319,11 @@
   else
     {
       rtx lab = function_symbol (func_ptr, "__udivsi3", SFUNC_STATIC).lab;
-      emit_move_insn (gen_rtx_REG (SImode, 4), operands[1]);
-      emit_move_insn (gen_rtx_REG (SImode, 5), operands[2]);
-      emit_insn (gen_udivsi3_i1 (operands[0], func_ptr, lab));
-      if (sh_lra_p ())
-	{
-	  emit_clobber (gen_rtx_REG (SImode, PR_REG));
-	  emit_clobber (gen_rtx_REG (SImode, T_REG));
-	  emit_clobber (gen_rtx_REG (SImode, R1_REG));
-	  emit_clobber (gen_rtx_REG (SImode, R4_REG));
-	}
+      last = gen_udivsi3_i1 (operands[0], func_ptr, lab);
     }
+  emit_move_insn (gen_rtx_REG (SImode, 4), operands[1]);
+  emit_move_insn (gen_rtx_REG (SImode, 5), operands[2]);
+  emit_insn (last);
   DONE;
 })
 
@@ -2450,52 +2404,23 @@
 		(match_operand:SI 2 "general_operand")))]
   ""
 {
+  rtx last;
   rtx func_ptr = gen_reg_rtx (Pmode);
 
   /* Emit the move of the address to a pseudo outside of the libcall.  */
   if (TARGET_DIVIDE_CALL_TABLE)
     {
       function_symbol (func_ptr, sh_divsi3_libfunc, SFUNC_GOT);
-      emit_move_insn (gen_rtx_REG (SImode, 4), operands[1]);
-      emit_move_insn (gen_rtx_REG (SImode, 5), operands[2]);
-      emit_insn (gen_divsi3_i4_int (operands[0], func_ptr));
-      if (sh_lra_p ())
-	{
-	  emit_clobber (gen_rtx_REG (SImode, PR_REG));
-	  emit_clobber (gen_rtx_REG (SImode, T_REG));
-	  emit_clobber (gen_rtx_REG (SImode, R1_REG));
-	  emit_clobber (gen_rtx_REG (SImode, MACH_REG));
-	  emit_clobber (gen_rtx_REG (SImode, MACL_REG));
-	}
+      last = gen_divsi3_i4_int (operands[0], func_ptr);
     }
   else if (TARGET_DIVIDE_CALL_FP)
     {
       rtx lab = function_symbol (func_ptr, sh_divsi3_libfunc,
 				 SFUNC_STATIC).lab;
-      emit_move_insn (gen_rtx_REG (SImode, 4), operands[1]);
-      emit_move_insn (gen_rtx_REG (SImode, 5), operands[2]);
       if (TARGET_FPU_SINGLE)
-	{
-	  emit_insn (gen_divsi3_i4_single (operands[0], func_ptr, lab));
-          if (sh_lra_p ())
-	    {
-	      emit_clobber (gen_rtx_REG (SImode, PR_REG));
-	      emit_clobber (gen_rtx_REG (SImode, DR0_REG));
-	      emit_clobber (gen_rtx_REG (SImode, DR2_REG));
-	      emit_clobber (gen_rtx_REG (SImode, R2_REG));
-	    }
-	}
+	last = gen_divsi3_i4_single (operands[0], func_ptr, lab);
       else
-	{
-	  emit_insn (gen_divsi3_i4 (operands[0], func_ptr, lab));
-          if (sh_lra_p ())
-	    {
-	      emit_clobber (gen_rtx_REG (SImode, PR_REG));
-	      emit_clobber (gen_rtx_REG (SImode, DR0_REG));
-	      emit_clobber (gen_rtx_REG (SImode, DR2_REG));
-	      emit_clobber (gen_rtx_REG (SImode, FPSCR_STAT_REG));
-	    }
-	}
+	last = gen_divsi3_i4 (operands[0], func_ptr, lab);
     }
   else if (TARGET_SH2A)
     {
@@ -2507,18 +2432,11 @@
   else
     {
       function_symbol (func_ptr, sh_divsi3_libfunc, SFUNC_GOT);
-      emit_move_insn (gen_rtx_REG (SImode, 4), operands[1]);
-      emit_move_insn (gen_rtx_REG (SImode, 5), operands[2]);
-      emit_insn (gen_divsi3_i1 (operands[0], func_ptr));
-      if (sh_lra_p ())
-	{
-	  emit_clobber (gen_rtx_REG (SImode, PR_REG));
-	  emit_clobber (gen_rtx_REG (SImode, T_REG));
-	  emit_clobber (gen_rtx_REG (SImode, R1_REG));
-	  emit_clobber (gen_rtx_REG (SImode, R2_REG));
-	  emit_clobber (gen_rtx_REG (SImode, R3_REG));
-	}
+      last = gen_divsi3_i1 (operands[0], func_ptr);
     }
+  emit_move_insn (gen_rtx_REG (SImode, 4), operands[1]);
+  emit_move_insn (gen_rtx_REG (SImode, 5), operands[2]);
+  emit_insn (last);
   DONE;
 })
 
@@ -2630,15 +2548,6 @@
       rtx sym = function_symbol (NULL, "__mulsi3", SFUNC_STATIC).sym;
 
       emit_insn (gen_mulsi3_call (force_reg (SImode, sym), operands[0]));
-      if (sh_lra_p ())
-	{
-	  emit_clobber (gen_rtx_REG (SImode, PR_REG));
-	  emit_clobber (gen_rtx_REG (SImode, T_REG));
-	  emit_clobber (gen_rtx_REG (SImode, R1_REG));
-	  emit_clobber (gen_rtx_REG (SImode, R2_REG));
-	  emit_clobber (gen_rtx_REG (SImode, R3_REG));
-	  emit_clobber (gen_rtx_REG (SImode, MACL_REG));
-	}
     }
   else
     {
@@ -3593,11 +3502,6 @@
       rtx funcaddr = gen_reg_rtx (Pmode);
       rtx lab = function_symbol (funcaddr, "__ashlsi3_r0", SFUNC_STATIC).lab;
       emit_insn (gen_ashlsi3_d_call (operands[0], operands[2], funcaddr, lab));
-      if (sh_lra_p ())
-	{
-	  emit_clobber (gen_rtx_REG (SImode, PR_REG));
-	  emit_clobber (gen_rtx_REG (SImode, T_REG));
-	}
 
       DONE;
     }
@@ -4044,11 +3948,6 @@
       rtx funcaddr = gen_reg_rtx (Pmode);
       rtx lab = function_symbol (funcaddr, "__lshrsi3_r0", SFUNC_STATIC).lab;
       emit_insn (gen_lshrsi3_d_call (operands[0], operands[2], funcaddr, lab));
-      if (sh_lra_p ())
-	{
-	  emit_clobber (gen_rtx_REG (SImode, PR_REG));
-	  emit_clobber (gen_rtx_REG (SImode, T_REG));
-	}
       DONE;
     }
 })
