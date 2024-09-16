@@ -2269,6 +2269,86 @@
   [(set_attr "type" "sfunc")
    (set_attr "needs_delay_slot" "yes")])
 
+(define_insn "udivsi3_i1_sfunc"
+  [(set (match_operand:SI 0 "register_operand" "=z,z")
+           (call (mem (match_operand:SI 1 "arith_reg_operand" "r,r"))
+                    (match_operand 2 "" "Z,Ccl")))
+   (use (reg:SI R4_REG))
+   (use (reg:SI R5_REG))
+   (clobber (reg:SI T_REG))
+   (clobber (reg:SI PR_REG))
+   (clobber (reg:SI R1_REG))
+   (clobber (reg:SI R4_REG))]
+  "TARGET_SH1 && TARGET_DIVIDE_CALL_DIV1 && sh_lra_p ()"
+  "@
+	jsr	@%1%#
+	bsrf	%1\n%O2:%#"
+  [(set_attr "type" "sfunc")
+   (set_attr "needs_delay_slot" "yes")])
+
+(define_insn "udivsi3_i4_sfunc"
+  [(set (match_operand:SI 0 "register_operand" "=y,y")
+           (call (mem (match_operand:SI 1 "arith_reg_operand" "r,r"))
+                    (match_operand 2 "" "Z,Ccl")))
+   (use (reg:SI R4_REG))
+   (use (reg:SI R5_REG))
+   (clobber (reg:SI T_REG))
+   (clobber (reg:SI PR_REG))
+   (clobber (reg:DF DR0_REG))
+   (clobber (reg:DF DR2_REG))
+   (clobber (reg:DF DR4_REG))
+   (clobber (reg:SI R0_REG))
+   (clobber (reg:SI R1_REG))
+   (clobber (reg:SI R4_REG))
+   (clobber (reg:SI R5_REG))
+   (clobber (reg:SI FPSCR_STAT_REG))
+   (use (reg:SI FPSCR_MODES_REG))]
+  "TARGET_FPU_DOUBLE && ! TARGET_FPU_SINGLE && sh_lra_p ()"
+  "@
+	jsr	@%1%#
+	bsrf	%1\n%O2:%#"
+  [(set_attr "type" "sfunc")
+   (set_attr "fp_mode" "double")
+   (set_attr "needs_delay_slot" "yes")])
+
+(define_insn "udivsi3_i4_single_sfunc"
+  [(set (match_operand:SI 0 "register_operand" "=y,y")
+           (call (mem (match_operand:SI 1 "arith_reg_operand" "r,r"))
+                    (match_operand 2 "" "Z,Ccl")))
+   (use (reg:SI R4_REG))
+   (use (reg:SI R5_REG))
+   (clobber (reg:SI T_REG))
+   (clobber (reg:SI PR_REG))
+   (clobber (reg:DF DR0_REG))
+   (clobber (reg:DF DR2_REG))
+   (clobber (reg:DF DR4_REG))
+   (clobber (reg:SI R0_REG))
+   (clobber (reg:SI R1_REG))
+   (clobber (reg:SI R4_REG))
+   (clobber (reg:SI R5_REG))]
+  "TARGET_FPU_ANY && TARGET_FPU_SINGLE && sh_lra_p ()"
+  "@
+	jsr	@%1%#
+	bsrf	%1\n%O2:%#"
+  [(set_attr "type" "sfunc")
+   (set_attr "needs_delay_slot" "yes")])
+
+(define_insn "udivsi3_i4_int_sfunc"
+  [(set (match_operand:SI 0 "register_operand" "=z")
+           (call (mem (match_operand:SI 1 "arith_reg_operand" "r"))
+                    (match_operand 2 "" "Z")))
+   (use (reg:SI R4_REG))
+   (use (reg:SI R5_REG))
+   (clobber (reg:SI T_REG))
+   (clobber (reg:SI R1_REG))
+   (clobber (reg:SI PR_REG))
+   (clobber (reg:SI MACH_REG))
+   (clobber (reg:SI MACL_REG))]
+  "TARGET_SH1 && sh_lra_p ()"
+  "jsr	@%1%#"
+  [(set_attr "type" "sfunc")
+   (set_attr "needs_delay_slot" "yes")])
+
 
 (define_expand "udivsi3"
   [(set (match_operand:SI 0 "register_operand")
@@ -2298,16 +2378,53 @@
 	  emit_move_insn (operands[0], operands[2]);
 	  DONE;
 	}
-      function_symbol (func_ptr, "__udivsi3_i4i", SFUNC_GOT);
-      last = gen_udivsi3_i4_int (operands[0], func_ptr);
+      if (sh_lra_p ())
+        {
+	  rtx lab = function_symbol (func_ptr, "__udivsi3_i4i", SFUNC_STATIC).lab;
+	  rtx r0_rtx = gen_rtx_REG (SImode, R0_REG);
+	  emit_move_insn (gen_rtx_REG (SImode, 4), operands[1]);
+	  emit_move_insn (gen_rtx_REG (SImode, 5), operands[2]);
+	  emit_call_insn (gen_udivsi3_i4_int_sfunc (r0_rtx, func_ptr, lab));
+	  emit_move_insn (operands[0], r0_rtx);
+	  DONE;
+	}
+      else
+        {
+	  function_symbol (func_ptr, "__udivsi3_i4i", SFUNC_GOT);
+	  last = gen_udivsi3_i4_int (operands[0], func_ptr);
+	}
     }
   else if (TARGET_DIVIDE_CALL_FP)
     {
       rtx lab = function_symbol (func_ptr, "__udivsi3_i4", SFUNC_STATIC).lab;
       if (TARGET_FPU_SINGLE)
-	last = gen_udivsi3_i4_single (operands[0], func_ptr, lab);
+	{
+	  if (sh_lra_p ())
+	    {
+	      rtx fpul_rtx = gen_rtx_REG (SImode, FPUL_REG);
+	      emit_move_insn (gen_rtx_REG (SImode, 4), operands[1]);
+	      emit_move_insn (gen_rtx_REG (SImode, 5), operands[2]);
+	      emit_call_insn (gen_udivsi3_i4_single_sfunc (fpul_rtx, func_ptr, lab));
+	      emit_move_insn (operands[0], fpul_rtx);
+	      DONE;
+	    }
+          else
+	    last = gen_udivsi3_i4_single (operands[0], func_ptr, lab);
+	}
       else
-	last = gen_udivsi3_i4 (operands[0], func_ptr, lab);
+        {
+	  if (sh_lra_p ())
+	    {
+	      rtx fpul_rtx = gen_rtx_REG (SImode, FPUL_REG);
+	      emit_move_insn (gen_rtx_REG (SImode, 4), operands[1]);
+	      emit_move_insn (gen_rtx_REG (SImode, 5), operands[2]);
+	      emit_call_insn (gen_udivsi3_i4_sfunc (fpul_rtx, func_ptr, lab));
+	      emit_move_insn (operands[0], fpul_rtx);
+	      DONE;
+	    }
+	  else
+	    last = gen_udivsi3_i4 (operands[0], func_ptr, lab);
+	}
     }
   else if (TARGET_SH2A)
     {
@@ -2319,7 +2436,17 @@
   else
     {
       rtx lab = function_symbol (func_ptr, "__udivsi3", SFUNC_STATIC).lab;
-      last = gen_udivsi3_i1 (operands[0], func_ptr, lab);
+      if (sh_lra_p ())
+        {
+	  rtx r0_rtx = gen_rtx_REG (SImode, R0_REG);
+	  emit_move_insn (gen_rtx_REG (SImode, 4), operands[1]);
+	  emit_move_insn (gen_rtx_REG (SImode, 5), operands[2]);
+	  emit_call_insn (gen_udivsi3_i1_sfunc (r0_rtx, func_ptr, lab));
+	  emit_move_insn (operands[0], r0_rtx);
+	  DONE;
+	}
+      else
+        last = gen_udivsi3_i1 (operands[0], func_ptr, lab);
     }
   emit_move_insn (gen_rtx_REG (SImode, 4), operands[1]);
   emit_move_insn (gen_rtx_REG (SImode, 5), operands[2]);
@@ -2398,6 +2525,74 @@
   [(set_attr "type" "sfunc")
    (set_attr "needs_delay_slot" "yes")])
 
+(define_insn "divsi3_i1_sfunc"
+  [(set (match_operand:SI 0 "register_operand" "=z")
+	(call (mem (match_operand:SI 1 "arith_reg_operand" "r"))
+	         (match_operand 2 "" "Z")))
+   (use (reg:SI R4_REG))
+   (use (reg:SI R5_REG))
+   (clobber (reg:SI T_REG))
+   (clobber (reg:SI PR_REG))
+   (clobber (reg:SI R1_REG))
+   (clobber (reg:SI R2_REG))
+   (clobber (reg:SI R3_REG))]
+  "TARGET_SH1 && TARGET_DIVIDE_CALL_DIV1 && sh_lra_p ()"
+  "jsr	@%1%#"
+  [(set_attr "type" "sfunc")
+   (set_attr "needs_delay_slot" "yes")])
+
+(define_insn "divsi3_i4_sfunc"
+  [(set (match_operand:SI 0 "register_operand" "=y,y")
+	(call (mem (match_operand:SI 1 "arith_reg_operand" "r,r"))
+	         (match_operand 2 "" "Z,Ccl")))
+   (use (reg:SI R4_REG))
+   (use (reg:SI R5_REG))
+   (clobber (reg:SI PR_REG))
+   (clobber (reg:DF DR0_REG))
+   (clobber (reg:DF DR2_REG))
+   (clobber (reg:SI FPSCR_STAT_REG))
+   (use (reg:SI FPSCR_MODES_REG))]
+  "TARGET_FPU_DOUBLE && ! TARGET_FPU_SINGLE && sh_lra_p ()"
+  "@
+	jsr	@%1%#
+	bsrf	%1\n%O2:%#"
+  [(set_attr "type" "sfunc")
+   (set_attr "fp_mode" "double")
+   (set_attr "needs_delay_slot" "yes")])
+
+(define_insn "divsi3_i4_single_sfunc"
+  [(set (match_operand:SI 0 "register_operand" "=y,y")
+	(call (mem (match_operand:SI 1 "arith_reg_operand" "r,r"))
+	         (match_operand 2 "" "Z,Ccl")))
+   (use (reg:SI R4_REG))
+   (use (reg:SI R5_REG))
+   (clobber (reg:SI PR_REG))
+   (clobber (reg:DF DR0_REG))
+   (clobber (reg:DF DR2_REG))
+   (clobber (reg:SI R2_REG))]
+  "TARGET_FPU_ANY && TARGET_FPU_SINGLE && sh_lra_p ()"
+  "@
+	jsr	@%1%#
+	bsrf	%1\n%O2:%#"
+  [(set_attr "type" "sfunc")
+   (set_attr "needs_delay_slot" "yes")])
+
+(define_insn "divsi3_i4_int_sfunc"
+  [(set (match_operand:SI 0 "register_operand" "=z")
+	(call (mem (match_operand:SI 1 "arith_reg_operand" "r"))
+	         (match_operand 2 "" "Z")))
+   (use (reg:SI R4_REG))
+   (use (reg:SI R5_REG))
+   (clobber (reg:SI T_REG))
+   (clobber (reg:SI PR_REG))
+   (clobber (reg:SI R1_REG))
+   (clobber (reg:SI MACH_REG))
+   (clobber (reg:SI MACL_REG))]
+  "TARGET_SH1 && sh_lra_p ()"
+  "jsr	@%1%#"
+  [(set_attr "type" "sfunc")
+   (set_attr "needs_delay_slot" "yes")])
+
 (define_expand "divsi3"
   [(set (match_operand:SI 0 "register_operand")
 	(div:SI (match_operand:SI 1 "general_operand")
@@ -2410,17 +2605,55 @@
   /* Emit the move of the address to a pseudo outside of the libcall.  */
   if (TARGET_DIVIDE_CALL_TABLE)
     {
-      function_symbol (func_ptr, sh_divsi3_libfunc, SFUNC_GOT);
-      last = gen_divsi3_i4_int (operands[0], func_ptr);
+      if (sh_lra_p ())
+        {
+	  rtx lab = function_symbol (func_ptr, sh_divsi3_libfunc,
+				     SFUNC_STATIC).lab;
+	  rtx r0_rtx = gen_rtx_REG (SImode, R0_REG);
+	  emit_move_insn (gen_rtx_REG (SImode, 4), operands[1]);
+	  emit_move_insn (gen_rtx_REG (SImode, 5), operands[2]);
+	  emit_call_insn (gen_divsi3_i4_int_sfunc (r0_rtx, func_ptr, lab));
+	  emit_move_insn (operands[0], r0_rtx);
+	  DONE;
+	}
+      else
+        {
+	  function_symbol (func_ptr, sh_divsi3_libfunc, SFUNC_GOT);
+          last = gen_divsi3_i4_int (operands[0], func_ptr);
+	}
     }
   else if (TARGET_DIVIDE_CALL_FP)
     {
       rtx lab = function_symbol (func_ptr, sh_divsi3_libfunc,
 				 SFUNC_STATIC).lab;
       if (TARGET_FPU_SINGLE)
-	last = gen_divsi3_i4_single (operands[0], func_ptr, lab);
+	{
+	  if (sh_lra_p ())
+	    {
+	      rtx fpul_rtx = gen_rtx_REG (SImode, FPUL_REG);
+	      emit_move_insn (gen_rtx_REG (SImode, 4), operands[1]);
+	      emit_move_insn (gen_rtx_REG (SImode, 5), operands[2]);
+	      emit_call_insn (gen_divsi3_i4_single_sfunc (fpul_rtx, func_ptr, lab));
+	      emit_move_insn (operands[0], fpul_rtx);
+	      DONE;
+	    }
+	  else
+	    last = gen_divsi3_i4_single (operands[0], func_ptr, lab);
+	}
       else
-	last = gen_divsi3_i4 (operands[0], func_ptr, lab);
+        {
+	  if (sh_lra_p ())
+	    {
+	      rtx fpul_rtx = gen_rtx_REG (SImode, FPUL_REG);
+	      emit_move_insn (gen_rtx_REG (SImode, 4), operands[1]);
+	      emit_move_insn (gen_rtx_REG (SImode, 5), operands[2]);
+	      emit_call_insn (gen_divsi3_i4_sfunc (fpul_rtx, func_ptr, lab));
+	      emit_move_insn (operands[0], fpul_rtx);
+	      DONE;
+	    }
+	  else
+	    last = gen_divsi3_i4 (operands[0], func_ptr, lab);
+	}
     }
   else if (TARGET_SH2A)
     {
@@ -2431,8 +2664,21 @@
     }
   else
     {
-      function_symbol (func_ptr, sh_divsi3_libfunc, SFUNC_GOT);
-      last = gen_divsi3_i1 (operands[0], func_ptr);
+      if (sh_lra_p ())
+        {
+	  rtx lab = function_symbol (func_ptr, sh_divsi3_libfunc, SFUNC_STATIC).lab;
+	  rtx r0_rtx = gen_rtx_REG (SImode, R0_REG);
+	  emit_move_insn (gen_rtx_REG (SImode, 4), operands[1]);
+	  emit_move_insn (gen_rtx_REG (SImode, 5), operands[2]);
+	  emit_call_insn (gen_divsi3_i1_sfunc (r0_rtx, func_ptr, lab));
+	  emit_move_insn (operands[0], r0_rtx);
+	  DONE;
+	}
+      else
+        {
+	  function_symbol (func_ptr, sh_divsi3_libfunc, SFUNC_GOT);
+	  last = gen_divsi3_i1 (operands[0], func_ptr);
+	}
     }
   emit_move_insn (gen_rtx_REG (SImode, 4), operands[1]);
   emit_move_insn (gen_rtx_REG (SImode, 5), operands[2]);
@@ -2507,6 +2753,23 @@
   [(set_attr "type" "sfunc")
    (set_attr "needs_delay_slot" "yes")])
 
+(define_insn "mulsi3_call_sfunc"
+  [(set (match_operand:SI 1 "register_operand" "=z")
+	(call (mem (match_operand:SI 0 "arith_reg_operand" "r"))
+	         (const_int 0)))
+   (use (reg:SI R4_REG))
+   (use (reg:SI R5_REG))
+   (clobber (reg:SI MACL_REG))
+   (clobber (reg:SI T_REG))
+   (clobber (reg:SI PR_REG))
+   (clobber (reg:SI R3_REG))
+   (clobber (reg:SI R2_REG))
+   (clobber (reg:SI R1_REG))]
+  "TARGET_SH1 && sh_lra_p ()"
+  "jsr	@%0%#"
+  [(set_attr "type" "sfunc")
+   (set_attr "needs_delay_slot" "yes")])
+
 (define_insn "mul_r"
   [(set (match_operand:SI 0 "arith_reg_dest" "=r")
 	(mult:SI (match_operand:SI 1 "arith_reg_operand" "0")
@@ -2547,7 +2810,15 @@
 
       rtx sym = function_symbol (NULL, "__mulsi3", SFUNC_STATIC).sym;
 
-      emit_insn (gen_mulsi3_call (force_reg (SImode, sym), operands[0]));
+      if (sh_lra_p ())
+        {
+	  rtx r0_rtx = gen_rtx_REG (SImode, R0_REG);
+          emit_call_insn (gen_mulsi3_call_sfunc (force_reg (SImode, sym), r0_rtx));
+	  emit_move_insn (operands[0], r0_rtx);
+	  DONE;
+	}
+      else
+        emit_insn (gen_mulsi3_call (force_reg (SImode, sym), operands[0]));
     }
   else
     {
@@ -3501,7 +3772,14 @@
       emit_move_insn (gen_rtx_REG (SImode, R4_REG), operands[1]);
       rtx funcaddr = gen_reg_rtx (Pmode);
       rtx lab = function_symbol (funcaddr, "__ashlsi3_r0", SFUNC_STATIC).lab;
-      emit_insn (gen_ashlsi3_d_call (operands[0], operands[2], funcaddr, lab));
+      if (sh_lra_p ())
+        {
+	  rtx r0_rtx = gen_rtx_REG (SImode, R0_REG);
+          emit_call_insn (gen_ashlsi3_d_call_sfunc (r0_rtx, r0_rtx, funcaddr, lab));
+	  emit_move_insn (operands[0], r0_rtx);
+	}
+      else
+        emit_insn (gen_ashlsi3_d_call (operands[0], operands[2], funcaddr, lab));
 
       DONE;
     }
@@ -3563,6 +3841,21 @@
    (clobber (reg:SI T_REG))
    (clobber (reg:SI PR_REG))]
   "TARGET_SH1 && !TARGET_DYNSHIFT"
+  "@
+	jsr	@%2%#
+	bsrf	%2\n%O3:%#"
+  [(set_attr "type" "sfunc")
+   (set_attr "needs_delay_slot" "yes")])
+
+(define_insn "ashlsi3_d_call_sfunc"
+  [(set (match_operand:SI 0 "arith_reg_dest" "=z,z")
+	(call (mem (match_operand:SI 2 "arith_reg_operand" "r,r"))
+	         (match_operand 3 "" "Z,Ccl")))
+   (use (match_operand:SI 1 "arith_reg_operand" "z,z"))
+   (use (reg:SI R4_REG))
+   (clobber (reg:SI T_REG))
+   (clobber (reg:SI PR_REG))]
+  "TARGET_SH1 && !TARGET_DYNSHIFT && sh_lra_p ()"
   "@
 	jsr	@%2%#
 	bsrf	%2\n%O3:%#"
@@ -3867,6 +4160,21 @@
   [(set_attr "type" "sfunc")
    (set_attr "needs_delay_slot" "yes")])
 
+(define_insn "ashrsi3_n_sfunc"
+  [(set (reg:SI R4_REG)
+	(call (mem (match_operand:SI 1 "arith_reg_operand" "r,r"))
+	         (match_operand 2 "" "Z,Ccl")))
+   (use (reg:SI R4_REG))
+   (use (match_operand:SI 0 "const_int_operand" "i,i"))
+   (clobber (reg:SI T_REG))
+   (clobber (reg:SI PR_REG))]
+  "TARGET_SH1 && sh_lra_p ()"
+  "@
+	jsr	@%1%#
+	bsrf	%1\n%O2:%#"
+  [(set_attr "type" "sfunc")
+   (set_attr "needs_delay_slot" "yes")])
+
 ;; . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 ;; DImode arithmetic shift right
 
@@ -3947,7 +4255,14 @@
       emit_move_insn (gen_rtx_REG (SImode, R4_REG), operands[1]);
       rtx funcaddr = gen_reg_rtx (Pmode);
       rtx lab = function_symbol (funcaddr, "__lshrsi3_r0", SFUNC_STATIC).lab;
-      emit_insn (gen_lshrsi3_d_call (operands[0], operands[2], funcaddr, lab));
+      if (sh_lra_p ())
+        {
+	  rtx r0_rtx = gen_rtx_REG (SImode, R0_REG);
+          emit_call_insn (gen_lshrsi3_d_call_sfunc (r0_rtx, r0_rtx, funcaddr, lab));
+	  emit_move_insn (operands[0], r0_rtx);
+	}
+      else
+        emit_insn (gen_lshrsi3_d_call (operands[0], operands[2], funcaddr, lab));
       DONE;
     }
 })
@@ -4012,6 +4327,21 @@
    (clobber (reg:SI T_REG))
    (clobber (reg:SI PR_REG))]
   "TARGET_SH1 && !TARGET_DYNSHIFT"
+  "@
+	jsr	@%2%#
+	bsrf	%2\n%O3:%#"
+  [(set_attr "type" "sfunc")
+   (set_attr "needs_delay_slot" "yes")])
+
+(define_insn "lshrsi3_d_call_sfunc"
+  [(set (match_operand:SI 0 "arith_reg_dest" "=z,z")
+	(call (mem (match_operand:SI 2 "arith_reg_operand" "r,r"))
+	         (match_operand 3 "" "Z,Ccl")))
+   (use (reg:SI R4_REG))
+   (use (match_operand:SI 1 "arith_reg_operand" "z,z"))
+   (clobber (reg:SI T_REG))
+   (clobber (reg:SI PR_REG))]
+  "TARGET_SH1 && !TARGET_DYNSHIFT && sh_lra_p ()"
   "@
 	jsr	@%2%#
 	bsrf	%2\n%O3:%#"
@@ -9098,6 +9428,77 @@
 	      (clobber (reg:SI R2_REG))
 	      (clobber (reg:SI R3_REG))])]
   "TARGET_HARD_SH4"
+  "@
+	jsr	@%0%#
+	bsrf	%0\n%O1:%#"
+  [(set_attr "type" "sfunc")
+   (set_attr "needs_delay_slot" "yes")])
+
+(define_insn "block_move_real_sfunc"
+  [(call (mem (match_operand:SI 0 "arith_reg_operand" "r,r"))
+            (match_operand 1 "" "Z,Ccl"))
+   (use (reg:SI R4_REG))
+   (use (reg:SI R5_REG))
+   (clobber (reg:SI PR_REG))
+   (clobber (reg:SI R0_REG))]
+  "TARGET_SH1 && ! TARGET_HARD_SH4 && sh_lra_p ()"
+  "@
+	jsr	@%0%#
+	bsrf	%0\n%O1:%#"
+  [(set_attr "type" "sfunc")
+   (set_attr "needs_delay_slot" "yes")])
+
+(define_insn "block_lump_real_sfunc"
+  [(call (mem (match_operand:SI 0 "arith_reg_operand" "r,r"))
+            (match_operand 1 "" "Z,Ccl"))
+   (use (reg:SI R4_REG))
+   (use (reg:SI R5_REG))
+   (use (reg:SI R6_REG))
+   (clobber (reg:SI PR_REG))
+   (clobber (reg:SI T_REG))
+   (clobber (reg:SI R4_REG))
+   (clobber (reg:SI R5_REG))
+   (clobber (reg:SI R6_REG))
+   (clobber (reg:SI R0_REG))]
+  "TARGET_SH1 && ! TARGET_HARD_SH4 && sh_lra_p ()"
+  "@
+	jsr	@%0%#
+	bsrf	%0\n%O1:%#"
+  [(set_attr "type" "sfunc")
+   (set_attr "needs_delay_slot" "yes")])
+
+(define_insn "block_move_real_i4_sfunc"
+  [(call (mem (match_operand:SI 0 "arith_reg_operand" "r,r"))
+            (match_operand 1 "" "Z,Ccl"))
+   (use (reg:SI R4_REG))
+   (use (reg:SI R5_REG))
+   (clobber (reg:SI PR_REG))
+   (clobber (reg:SI R0_REG))
+   (clobber (reg:SI R1_REG))
+   (clobber (reg:SI R2_REG))]
+  "TARGET_HARD_SH4 && sh_lra_p ()"
+  "@
+	jsr	@%0%#
+	bsrf	%0\n%O1:%#"
+  [(set_attr "type" "sfunc")
+   (set_attr "needs_delay_slot" "yes")])
+
+(define_insn "block_lump_real_i4_sfunc"
+  [(call (mem (match_operand:SI 0 "arith_reg_operand" "r,r"))
+            (match_operand 1 "" "Z,Ccl"))
+   (use (reg:SI R4_REG))
+   (use (reg:SI R5_REG))
+   (use (reg:SI R6_REG))
+   (clobber (reg:SI PR_REG))
+   (clobber (reg:SI T_REG))
+   (clobber (reg:SI R4_REG))
+   (clobber (reg:SI R5_REG))
+   (clobber (reg:SI R6_REG))
+   (clobber (reg:SI R0_REG))
+   (clobber (reg:SI R1_REG))
+   (clobber (reg:SI R2_REG))
+   (clobber (reg:SI R3_REG))]
+  "TARGET_HARD_SH4 && sh_lra_p ()"
   "@
 	jsr	@%0%#
 	bsrf	%0\n%O1:%#"

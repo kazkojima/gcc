@@ -3894,7 +3894,10 @@ expand_ashiftrt (rtx *operands)
   emit_move_insn (gen_rtx_REG (SImode, 4), operands[1]);
   sprintf (func, "__ashiftrt_r4_%d", value);
   rtx lab = function_symbol (wrk, func, SFUNC_STATIC).lab;
-  emit_insn (gen_ashrsi3_n (GEN_INT (value), wrk, lab));
+  if (sh_lra_p ())
+    emit_call_insn (gen_ashrsi3_n_sfunc (GEN_INT (value), wrk, lab));
+  else
+    emit_insn (gen_ashrsi3_n (GEN_INT (value), wrk, lab));
   emit_move_insn (operands[0], gen_rtx_REG (SImode, 4));
   return true;
 }

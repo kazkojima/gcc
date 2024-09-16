@@ -115,7 +115,13 @@ expand_block_move (rtx *operands)
 				     SFUNC_STATIC).lab;
 	  force_into (XEXP (operands[0], 0), r4);
 	  force_into (XEXP (operands[1], 0), r5);
-	  emit_insn (gen_block_move_real_i4 (func_addr_rtx, lab));
+	  if (sh_lra_p ())
+	    {
+	      emit_use (operands[1]);
+	      emit_call_insn (gen_block_move_real_i4_sfunc (func_addr_rtx, lab));
+	    }
+	  else
+	    emit_insn (gen_block_move_real_i4 (func_addr_rtx, lab));
 	  return true;
 	}
       else if (! optimize_size)
@@ -134,7 +140,13 @@ expand_block_move (rtx *operands)
 
 	  int dwords = bytes >> 3;
 	  emit_insn (gen_move_insn (r6, GEN_INT (dwords - 1)));
-	  emit_insn (gen_block_lump_real_i4 (func_addr_rtx, lab));
+	  if (sh_lra_p ())
+	    {
+	      emit_use (operands[1]);
+	      emit_call_insn (gen_block_lump_real_i4_sfunc (func_addr_rtx, lab));
+	    }
+	  else
+	    emit_insn (gen_block_lump_real_i4 (func_addr_rtx, lab));
 	  return true;
 	}
       else
@@ -151,7 +163,13 @@ expand_block_move (rtx *operands)
       rtx lab = function_symbol (func_addr_rtx, entry, SFUNC_STATIC).lab;
       force_into (XEXP (operands[0], 0), r4);
       force_into (XEXP (operands[1], 0), r5);
-      emit_insn (gen_block_move_real (func_addr_rtx, lab));
+      if (sh_lra_p ())
+	{
+	  emit_use (operands[1]);
+	  emit_call_insn (gen_block_move_real_sfunc (func_addr_rtx, lab));
+	}
+      else
+	emit_insn (gen_block_move_real (func_addr_rtx, lab));
       return true;
     }
 
@@ -178,7 +196,13 @@ expand_block_move (rtx *operands)
       final_switch = 16 - ((bytes / 4) % 16);
       while_loop = ((bytes / 4) / 16 - 1) * 16;
       emit_insn (gen_move_insn (r6, GEN_INT (while_loop + final_switch)));
-      emit_insn (gen_block_lump_real (func_addr_rtx, lab));
+      if (sh_lra_p ())
+	{
+	  emit_use (operands[1]);
+	  emit_call_insn (gen_block_lump_real_sfunc (func_addr_rtx, lab));
+	}
+      else
+	emit_insn (gen_block_lump_real (func_addr_rtx, lab));
       return true;
     }
 
