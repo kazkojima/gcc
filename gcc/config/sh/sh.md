@@ -6188,6 +6188,15 @@
   [(set (match_dup 0) (match_dup 0))]
   "")
 
+(define_split
+  [(set (match_operand:SF 0 "register_operand" "")
+	(match_operand:SF 1 "register_operand" ""))
+   (use (reg:SI FPSCR_MODES_REG))]
+  "TARGET_SH2E && sh_lra_p () && reload_completed
+   && true_regnum (operands[0]) == true_regnum (operands[1])"
+  [(set (match_dup 0) (match_dup 0))]
+  "")
+
 ;; fmovd substitute post-reload splits
 (define_split
   [(set (match_operand:DF 0 "register_operand" "")
@@ -6698,8 +6707,7 @@
   prepare_move_operands (operands, SFmode);
   if (TARGET_SH2E)
     {
-      if (lra_in_progress &&
-          !(REG_P (operands[0]) && REG_P (operands[1])))
+      if (sh_lra_p ())
 	{
 	  if (GET_CODE (operands[0]) == SCRATCH)
 	    DONE;
@@ -6717,15 +6725,6 @@
 	    emit_insn (gen_movsf_ie_ra (operands[0], operands[1]));
 	  DONE;
 	}
-      else if (sh_lra_p ()
-                   && (GET_CODE (operands[1]) == CONST_DOUBLE
-		            &&  ! satisfies_constraint_G (operands[1])
-		            &&  ! satisfies_constraint_H (operands[1])
-		            && REG_P (operands[0])))
-        {
-          emit_insn (gen_movsf_ie_F_z (operands[0], operands[1]));
-          DONE;
-        }
 
       emit_insn (gen_movsf_ie (operands[0], operands[1]));
       DONE;
