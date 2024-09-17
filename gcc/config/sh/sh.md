@@ -6674,8 +6674,8 @@
    (set_attr "length" "4")])
 
 (define_insn "movsf_ie_y"
-  [(set (match_operand:SF 0 "register_operand" "=fr")
-	(match_operand:SF 1 "register_operand" "rf"))
+  [(set (match_operand:SF 0 "arith_reg_dest" "=fr")
+	(match_operand:SF 1 "arith_reg_operand" "rf"))
    (use (reg:SI FPSCR_MODES_REG))
    (clobber (reg:SI FPUL_REG))]
   "TARGET_SH2E && sh_lra_p ()"
