@@ -6563,16 +6563,17 @@
    (use (reg:SI FPSCR_MODES_REG))
    (use (reg:SI PIC_REG))
    (clobber (reg:SI PR_REG))
-   (clobber (match_scratch:SI 2 "=&r"))]
+   (clobber (reg:SI R3_REG))]
   "TARGET_SH2"
   "#"
   "reload_completed"
   [(const_int 0)]
 {
   rtx lab = PATTERN (gen_call_site ());
-  
-  sh_expand_sym_label2reg (operands[2], operands[0], lab, false);
-  emit_call_insn (gen_calli_pcrel (operands[2], operands[1], copy_rtx (lab)));
+  rtx scr = gen_rtx_REG (Pmode, R3_REG);
+
+  sh_expand_sym_label2reg (scr, operands[0], lab, false);
+  emit_call_insn (gen_calli_pcrel (scr, operands[1], copy_rtx (lab)));
   DONE;
 }
   [(set_attr "type" "call")
@@ -6675,16 +6676,17 @@
    (use (reg:SI FPSCR_MODES_REG))
    (use (reg:SI PIC_REG))
    (clobber (reg:SI PR_REG))
-   (clobber (match_scratch:SI 3 "=&r"))]
+   (clobber (reg:SI R3_REG))]
   "TARGET_SH2"
   "#"
   "reload_completed"
   [(const_int 0)]
 {
   rtx lab = PATTERN (gen_call_site ());
+  rtx scr = gen_rtx_REG (Pmode, R3_REG);
 
-  sh_expand_sym_label2reg (operands[3], operands[1], lab, false);
-  emit_call_insn (gen_call_valuei_pcrel (operands[0], operands[3],
+  sh_expand_sym_label2reg (scr, operands[1], lab, false);
+  emit_call_insn (gen_call_valuei_pcrel (operands[0], scr,
 					 operands[2], copy_rtx (lab)));
   DONE;
 }
@@ -6873,7 +6875,7 @@
   [(call (mem:SI (match_operand:SI 0 "symbol_ref_operand" ""))
 	 (match_operand 1 "" ""))
    (use (reg:SI FPSCR_MODES_REG))
-   (clobber (match_scratch:SI 2 "=&k"))
+   (clobber (reg:SI R3_REG))
    (return)]
   "TARGET_SH2 && !TARGET_FDPIC"
   "#"
@@ -6881,10 +6883,11 @@
   [(const_int 0)]
 {
   rtx lab = PATTERN (gen_call_site ());
+  rtx scr = gen_rtx_REG (Pmode, R3_REG);
   rtx call_insn;
 
-  sh_expand_sym_label2reg (operands[2], operands[0], lab, true);
-  call_insn = emit_call_insn (gen_sibcalli_pcrel (operands[2], operands[1],
+  sh_expand_sym_label2reg (scr, operands[0], lab, true);
+  call_insn = emit_call_insn (gen_sibcalli_pcrel (scr, operands[1],
 						  copy_rtx (lab)));
   SIBLING_CALL_P (call_insn) = 1;
   DONE;
@@ -6900,7 +6903,7 @@
 	 (match_operand 1))
    (use (reg:SI FPSCR_MODES_REG))
    (use (reg:SI PIC_REG))
-   (clobber (match_scratch:SI 2 "=k"))
+   (clobber (reg:SI R3_REG))
    (return)]
   "TARGET_SH2 && TARGET_FDPIC"
   "#"
@@ -6908,9 +6911,10 @@
   [(const_int 0)]
 {
   rtx lab = PATTERN (gen_call_site ());
+  rtx scr = gen_rtx_REG (Pmode, R3_REG);
 
-  sh_expand_sym_label2reg (operands[2], operands[0], lab, true);
-  rtx i = emit_call_insn (gen_sibcalli_pcrel_fdpic (operands[2], operands[1],
+  sh_expand_sym_label2reg (scr, operands[0], lab, true);
+  rtx i = emit_call_insn (gen_sibcalli_pcrel_fdpic (scr, operands[1],
 						    copy_rtx (lab)));
   SIBLING_CALL_P (i) = 1;
   DONE;
@@ -7039,7 +7043,7 @@
 	(call (mem:SI (match_operand:SI 1 "symbol_ref_operand" ""))
 	      (match_operand 2 "" "")))
    (use (reg:SI FPSCR_MODES_REG))
-   (clobber (reg:SI R1_REG))
+   (clobber (reg:SI R3_REG))
    (return)]
   "TARGET_SH2 && !TARGET_FDPIC"
   "#"
@@ -7047,7 +7051,7 @@
   [(const_int 0)]
 {
   rtx lab = PATTERN (gen_call_site ());
-  rtx tmp =  gen_rtx_REG (SImode, R1_REG);
+  rtx tmp =  gen_rtx_REG (SImode, R3_REG);
 
   sh_expand_sym_label2reg (tmp, operands[1], lab, true);
   rtx call_insn = emit_call_insn (gen_sibcall_valuei_pcrel (operands[0],
@@ -7071,7 +7075,7 @@
 	      (match_operand 2)))
    (use (reg:SI FPSCR_MODES_REG))
    (use (reg:SI PIC_REG))
-   (clobber (reg:SI R1_REG))
+   (clobber (reg:SI R3_REG))
    (return)]
   "TARGET_SH2 && TARGET_FDPIC"
   "#"
@@ -7079,7 +7083,7 @@
   [(const_int 0)]
 {
   rtx lab = PATTERN (gen_call_site ());
-  rtx tmp = gen_rtx_REG (SImode, R1_REG);
+  rtx tmp = gen_rtx_REG (SImode, R3_REG);
 
   sh_expand_sym_label2reg (tmp, operands[1], lab, true);
   rtx i = emit_call_insn (gen_sibcall_valuei_pcrel_fdpic (operands[0],
