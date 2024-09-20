@@ -2278,6 +2278,8 @@
 {
   rtx last;
   rtx func_ptr = gen_reg_rtx (Pmode);
+  bool clobber_r4 = false;
+  bool clobber_r5 = false;
 
   /* Emit the move of the address to a pseudo outside of the libcall.  */
   if (TARGET_DIVIDE_CALL_TABLE)
@@ -2308,6 +2310,8 @@
 	last = gen_udivsi3_i4_single (operands[0], func_ptr, lab);
       else
 	last = gen_udivsi3_i4 (operands[0], func_ptr, lab);
+      if (sh_lra_p ())
+      	 clobber_r4 = clobber_r5 = true;
     }
   else if (TARGET_SH2A)
     {
@@ -2320,11 +2324,17 @@
     {
       rtx lab = function_symbol (func_ptr, "__udivsi3", SFUNC_STATIC).lab;
       last = gen_udivsi3_i1 (operands[0], func_ptr, lab);
+      if (sh_lra_p ())
+      	 clobber_r4 = true;
     }
   emit_move_insn (gen_rtx_REG (SImode, 4), operands[1]);
   emit_move_insn (gen_rtx_REG (SImode, 5), operands[2]);
   emit_insn (last);
-  DONE;
+  if (clobber_r4)
+    emit_clobber (gen_rtx_REG (SImode, 4));
+   if (clobber_r5)
+    emit_clobber (gen_rtx_REG (SImode, 5));
+   DONE;
 })
 
 (define_insn "divsi3_sh2a"
