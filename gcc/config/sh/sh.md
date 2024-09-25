@@ -6265,6 +6265,7 @@
 				" f,r,G,H,m,f,FQ,m,r,y,f,>,y,r,y,>,y"))
    (use (reg:SI FPSCR_MODES_REG))]
   "TARGET_SH2E && sh_lra_p ()
+   && ! sh_movsf_ie_y_split_p (operands[0], operands[1])
    && (arith_reg_operand (operands[0], SFmode)
        || fpul_operand (operands[0], SFmode)
        || arith_reg_operand (operands[1], SFmode)
@@ -6402,6 +6403,12 @@
 	    emit_insn (gen_movsf_ie_Q_z (operands[0], operands[1]));
 	  else if (sh_movsf_ie_y_split_p (operands[0], operands[1]))
 	    emit_insn (gen_movsf_ie_y (operands[0], operands[1]));
+	  /* reg from/to multiword subreg may be splitted to several reg from/to
+	     subreg of SImode by subreg1 pass.  This confuses our splitted
+	     movsf logic for LRA and will end up in bad code or ICE.  Fall back
+	     movsf_ie in this case.  */
+	  else if (sh_movsf_ie_subreg_multiword_p (operands[0], operands[1]))
+	    emit_insn (gen_movsf_ie (operands[0], operands[1]));
 	  else
 	    emit_insn (gen_movsf_ie_ra (operands[0], operands[1]));
 	  DONE;
