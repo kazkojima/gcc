@@ -6381,6 +6381,64 @@
 	      (clobber (scratch:SI))])]
   "")
 
+(define_insn "*movsf_ie_store_mem_index"
+  [(set (mem:SF
+               (plus:SI (match_operand:SI 0 "arith_reg_operand" "%r")
+                              (match_operand:SI 1 "arith_reg_operand" "z")))
+           (match_operand:SF 2 "fp_arith_reg_operand" "f"))
+    (use (reg:SI FPSCR_MODES_REG))]
+  "TARGET_SH2E && sh_lra_p ()
+   && REG_P (operands[1]) && REGNO (operands[1]) == R0_REG"
+  "fmov.s    %2,@(%1,%0)"
+  [(set_attr "type" "store")])
+
+(define_insn_and_split "movsf_ie_store_mem_index"
+  [(set (mem:SF
+               (plus:SI (match_operand:SI 0 "arith_reg_operand" "%r")
+                              (match_operand:SI 1 "arith_reg_operand" "^zr")))
+           (match_operand:SF 2 "fp_arith_reg_operand" "f"))
+   (use (reg:SI FPSCR_MODES_REG))
+   (clobber (reg:SI R0_REG))]
+  "TARGET_SH2E && sh_lra_p ()"
+  "#"
+  "&& 1"
+  [(set (match_dup 3) (match_dup 1))
+   (parallel [(set (mem:SF (plus:SI (match_dup 0) (match_dup 3))) (match_dup 2))
+		(use (reg:SI FPSCR_MODES_REG))])]
+{
+  operands[3] = gen_rtx_REG (SImode, R0_REG);
+}
+  [(set_attr "type" "store")])
+
+(define_insn "*movsf_ie_load_mem_index"
+  [(set (match_operand:SF 0 "fp_arith_reg_operand" "=f")
+	   (mem:SF
+               (plus:SI (match_operand:SI 1 "arith_reg_operand" "%r")
+                              (match_operand:SI 2 "arith_reg_operand" "z"))))
+   (use (reg:SI FPSCR_MODES_REG))]
+  "TARGET_SH2E && sh_lra_p ()
+   && REG_P (operands[2]) && REGNO (operands[2]) == R0_REG"
+  "fmov.s    @(%2,%1),%0"
+  [(set_attr "type" "load")])
+
+(define_insn_and_split "movsf_ie_load_mem_index"
+  [(set (match_operand:SF 0 "fp_arith_reg_operand" "=f")
+	   (mem:SF
+               (plus:SI (match_operand:SI 1 "arith_reg_operand" "%r")
+                              (match_operand:SI 2 "arith_reg_operand" "^zr"))))
+   (use (reg:SI FPSCR_MODES_REG))
+   (clobber (reg:SI R0_REG))]
+  "TARGET_SH2E && sh_lra_p ()"
+  "#"
+  "&& 1"
+  [(set (match_dup 3) (match_dup 2))
+   (parallel [(set (match_dup 0) (mem:SF (plus:SI (match_dup 1) (match_dup 3))))
+		(use (reg:SI FPSCR_MODES_REG))])]
+{
+  operands[3] = gen_rtx_REG (SImode, R0_REG);
+}
+  [(set_attr "type" "load")])
+
 (define_expand "movsf"
   [(set (match_operand:SF 0 "general_movdst_operand" "")
         (match_operand:SF 1 "general_movsrc_operand" ""))]
@@ -6393,6 +6451,28 @@
 	{
 	  if (GET_CODE (operands[0]) == SCRATCH)
 	    DONE;
+	  if (! lra_in_progress && ! reload_completed
+	      && fp_arith_reg_operand (operands[1], SFmode)
+	      && (satisfies_constraint_Sid (operands[0])
+	              || sh_satisfies_constraint_Sid_subreg_index (operands[0])))
+	    {
+	      rtx adr = XEXP (operands[0], 0);
+	      rtx base = XEXP (adr, 0);
+	      rtx idx = XEXP (adr, 1);
+	      emit_insn (gen_movsf_ie_store_mem_index (base, idx, operands[1]));
+	      DONE;
+	    }
+	  if (! lra_in_progress && ! reload_completed
+	      && fp_arith_reg_operand (operands[0], SFmode)
+	      && (satisfies_constraint_Sid (operands[1])
+	              || sh_satisfies_constraint_Sid_subreg_index (operands[1])))
+	    {
+	      rtx adr = XEXP (operands[1], 0);
+	      rtx base = XEXP (adr, 0);
+	      rtx idx = XEXP (adr, 1);
+	      emit_insn (gen_movsf_ie_load_mem_index (operands[0], base, idx));
+	      DONE;
+	    }
 	  if (GET_CODE (operands[1]) == CONST_DOUBLE
 	      &&  ! satisfies_constraint_G (operands[1])
 	      &&  ! satisfies_constraint_H (operands[1])
