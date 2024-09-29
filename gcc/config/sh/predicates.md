@@ -208,8 +208,7 @@
 ;; Returns 1 if OP is a simple register address.
 (define_predicate "simple_mem_operand"
   (and (match_code "mem")
-       (match_code "reg" "0")
-       (match_test "arith_reg_operand (XEXP (op, 0), SImode)")))
+       (match_test "satisfies_constraint_Sra (op)")))
 
 ;; Returns 1 if OP is a valid displacement address.
 (define_predicate "displacement_mem_operand"
@@ -239,13 +238,17 @@
 (define_predicate "post_inc_mem"
   (and (match_code "mem")
        (match_code "post_inc" "0")
-       (match_code "reg" "00")))
+       (match_test "MAYBE_BASE_REGISTER_RTX_P (XEXP (XEXP (op, 0), 0), false)")))
 
 ;; Returns true if OP is a pre-decrement addressing mode memory reference.
 (define_predicate "pre_dec_mem"
   (and (match_code "mem")
        (match_code "pre_dec" "0")
-       (match_code "reg" "00")))
+       (match_test "MAYBE_BASE_REGISTER_RTX_P (XEXP (XEXP (op, 0), 0), false)")))
+
+(define_predicate "indexed_mem_operand"
+  (and (match_code "mem")
+       (match_test "satisfies_constraint_Sid (op)")))
 
 ;; Returns 1 if the operand can be used in an SH2A movu.{b|w} insn.
 (define_predicate "zero_extend_movu_operand"
@@ -325,9 +328,7 @@
 	 FIXME: maybe remove this check completely?  */
       if (!lra_in_progress && (mode == QImode || mode == HImode)
 	  && GET_CODE (x) == PLUS
-	  && REG_P (XEXP (x, 0))
-	  && (GENERAL_REGISTER_P (REGNO (XEXP (x, 0)))
-	         || REGNO (XEXP (x, 0)) >= FIRST_PSEUDO_REGISTER)
+	  && MAYBE_BASE_REGISTER_RTX_P (XEXP (x, 0), false)
 	  && CONST_INT_P (XEXP (x, 1)))
 	return sh_legitimate_index_p (mode, XEXP (x, 1), TARGET_SH2A, false);
 
@@ -412,9 +413,7 @@
 	 FIXME: maybe remove this check completely?  */
       if (!lra_in_progress && (mode == QImode || mode == HImode)
 	  && GET_CODE (x) == PLUS
-	  && REG_P (XEXP (x, 0))
-	  && (GENERAL_REGISTER_P (REGNO (XEXP (x, 0)))
-	         || REGNO (XEXP (x, 0)) >= FIRST_PSEUDO_REGISTER)
+	  && MAYBE_BASE_REGISTER_RTX_P (XEXP (x, 0), false)
 	  && CONST_INT_P (XEXP (x, 1)))
 	return sh_legitimate_index_p (mode, XEXP (x, 1), TARGET_SH2A, false);
 

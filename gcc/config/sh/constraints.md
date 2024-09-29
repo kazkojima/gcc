@@ -261,15 +261,17 @@
 	    (match_test "~ival == 128"))))
 
 (define_memory_constraint "Sua"
-  "@internal"
-  (and (match_test "memory_operand (op, GET_MODE (op))")
-       (match_test "GET_CODE (XEXP (op, 0)) != PLUS")))
+  "A memory reference that allows simple register or post-inc addressing."
+  (and (match_code "mem")
+       (ior (match_test "MAYBE_BASE_REGISTER_RTX_P (XEXP (op, 0), false)")
+            (and (match_code "post_inc" "0")
+                 (match_test "MAYBE_BASE_REGISTER_RTX_P (XEXP (XEXP (op, 0), 0), false)")))))
 
 (define_memory_constraint "Sdd"
   "A memory reference that uses displacement addressing."
   (and (match_code "mem")
        (match_code "plus" "0")
-       (match_code "reg" "00")
+       (match_test "MAYBE_BASE_REGISTER_RTX_P (XEXP (XEXP (op, 0), 0), false)")
        (match_code "const_int" "01")))
 
 (define_memory_constraint "Snd"
@@ -281,19 +283,23 @@
   "A memory reference that uses index addressing."
   (and (match_code "mem")
        (match_code "plus" "0")
-       (match_code "reg" "00")
-       (match_code "reg" "01")))
+       (ior (and (match_test "MAYBE_INDEX_REGISTER_RTX_P (XEXP (XEXP (op, 0), 0), false)")
+                 (match_test "MAYBE_BASE_REGISTER_RTX_P (XEXP (XEXP (op, 0), 1), false)"))
+	    (and (match_test "MAYBE_INDEX_REGISTER_RTX_P (XEXP (XEXP (op, 0), 1), false)")
+                 (match_test "MAYBE_BASE_REGISTER_RTX_P (XEXP (XEXP (op, 0), 0), false)")))))
 
 (define_memory_constraint "Ssd"
   "A memory reference that excludes index and displacement addressing."
   (and (match_code "mem")
-       (match_test "! satisfies_constraint_Sid (op)")
-       (match_test "! satisfies_constraint_Sdd (op)")))
+       (ior (match_test "MAYBE_BASE_REGISTER_RTX_P (XEXP (op, 0), false)")
+            (and (ior (match_code "pre_dec" "0") (match_code "post_inc" "0"))
+                 (match_test "MAYBE_BASE_REGISTER_RTX_P (XEXP (XEXP (op, 0), 0), false)")))))
 
 (define_memory_constraint "Sbv"
   "A memory reference, as used in SH2A bclr.b, bset.b, etc."
-  (and (match_test "MEM_P (op) && GET_MODE (op) == QImode")
-       (match_test "REG_P (XEXP (op, 0))")))
+  (and (match_code "mem")
+       (match_test "GET_MODE (op) == QImode")
+       (match_test "MAYBE_BASE_REGISTER_RTX_P (XEXP (op, 0), false)")))
 
 (define_memory_constraint "Sbw"
   "A memory reference, as used in SH2A bclr.b, bset.b, etc."
@@ -304,13 +310,13 @@
 (define_memory_constraint "Sra"
   "A memory reference that uses simple register addressing."
   (and (match_code "mem")
-       (match_code "reg" "0")))
+       (match_test "MAYBE_BASE_REGISTER_RTX_P (XEXP (op, 0), false)")))
 
 (define_memory_constraint "Ara"
   "A memory reference that uses simple register addressing suitable for
    gusa atomic operations."
   (and (match_code "mem")
-       (match_code "reg" "0")
+       (match_test "MAYBE_BASE_REGISTER_RTX_P (XEXP (op, 0), false)")
        (match_test "REGNO (XEXP (op, 0)) != SP_REG")))
 
 (define_memory_constraint "Add"
@@ -319,6 +325,6 @@
   (and (match_code "mem")
        (match_test "GET_MODE (op) == SImode")
        (match_code "plus" "0")
-       (match_code "reg" "00")
+       (match_test "MAYBE_BASE_REGISTER_RTX_P (XEXP (XEXP (op, 0), 0), false)")
        (match_code "const_int" "01")
        (match_test "REGNO (XEXP (XEXP (op, 0), 0)) != SP_REG")))

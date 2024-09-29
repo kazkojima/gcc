@@ -2194,10 +2194,18 @@
 ;; there is nothing to prevent reload from using r0 to reload the address.
 ;; This reload would clobber the value in r0 we are trying to store.
 ;; If we let reload allocate r0, then this problem can never happen.
+;;
+;; In addition to that, we also must pin the input regs to hard-regs via the
+;; predicates.  When these insns are instantiated it also emits the
+;; accompanying mov insns to load the hard-regs.  However, subsequent RTL
+;; passes might move things around and reassign the operands to pseudo regs
+;; which might get allocated to different (wrong) hard-regs eventually.  To
+;; avoid that, only allow matching these insns if the operands are the
+;; expected hard-regs.
 (define_insn "udivsi3_i1"
   [(set (match_operand:SI 0 "register_operand" "=z,z")
 	(udiv:SI (match_operand:SI 3 "hard_reg_r4" "=r,r")
-		       (match_operand:SI 4 "hard_reg_r5" "=r,r")))
+		 (match_operand:SI 4 "hard_reg_r5" "=r,r")))
    (clobber (reg:SI T_REG))
    (clobber (reg:SI PR_REG))
    (clobber (reg:SI R1_REG))
@@ -2216,7 +2224,7 @@
 (define_insn "udivsi3_i4"
   [(set (match_operand:SI 0 "register_operand" "=y,y")
 	(udiv:SI (match_operand:SI 3 "hard_reg_r4" "=r,r")
-		       (match_operand:SI 4 "hard_reg_r5" "=r,r")))
+		 (match_operand:SI 4 "hard_reg_r5" "=r,r")))
    (clobber (reg:SI T_REG))
    (clobber (reg:SI PR_REG))
    (clobber (reg:DF DR0_REG))
@@ -2243,7 +2251,7 @@
 (define_insn "udivsi3_i4_single"
   [(set (match_operand:SI 0 "register_operand" "=y,y")
 	(udiv:SI (match_operand:SI 3 "hard_reg_r4" "=r,r")
-		       (match_operand:SI 4 "hard_reg_r5" "=r,r")))
+		 (match_operand:SI 4 "hard_reg_r5" "=r,r")))
    (clobber (reg:SI T_REG))
    (clobber (reg:SI PR_REG))
    (clobber (reg:DF DR0_REG))
@@ -5389,8 +5397,7 @@
       && sh_lra_p ()
       && ! TARGET_SH2A
       && arith_reg_operand (operands[1], <MODE>mode)
-      && (satisfies_constraint_Sid (operands[0])
-              || sh_satisfies_constraint_Sid_subreg_index (operands[0])))
+      && satisfies_constraint_Sid (operands[0]))
     {
       rtx adr = XEXP (operands[0], 0);
       rtx base = XEXP (adr, 0);
@@ -6381,17 +6388,6 @@
 	      (clobber (scratch:SI))])]
   "")
 
-(define_insn "*movsf_ie_store_mem_index"
-  [(set (mem:SF
-               (plus:SI (match_operand:SI 0 "arith_reg_operand" "%r")
-                              (match_operand:SI 1 "arith_reg_operand" "z")))
-           (match_operand:SF 2 "fp_arith_reg_operand" "f"))
-    (use (reg:SI FPSCR_MODES_REG))]
-  "TARGET_SH2E && sh_lra_p ()
-   && REG_P (operands[1]) && REGNO (operands[1]) == R0_REG"
-  "fmov.s    %2,@(%1,%0)"
-  [(set_attr "type" "store")])
-
 (define_insn_and_split "movsf_ie_store_mem_index"
   [(set (mem:SF
                (plus:SI (match_operand:SI 0 "arith_reg_operand" "%r")
@@ -6409,17 +6405,6 @@
   operands[3] = gen_rtx_REG (SImode, R0_REG);
 }
   [(set_attr "type" "store")])
-
-(define_insn "*movsf_ie_load_mem_index"
-  [(set (match_operand:SF 0 "fp_arith_reg_operand" "=f")
-	   (mem:SF
-               (plus:SI (match_operand:SI 1 "arith_reg_operand" "%r")
-                              (match_operand:SI 2 "arith_reg_operand" "z"))))
-   (use (reg:SI FPSCR_MODES_REG))]
-  "TARGET_SH2E && sh_lra_p ()
-   && REG_P (operands[2]) && REGNO (operands[2]) == R0_REG"
-  "fmov.s    @(%2,%1),%0"
-  [(set_attr "type" "load")])
 
 (define_insn_and_split "movsf_ie_load_mem_index"
   [(set (match_operand:SF 0 "fp_arith_reg_operand" "=f")
@@ -6453,8 +6438,7 @@
 	    DONE;
 	  if (! lra_in_progress && ! reload_completed
 	      && fp_arith_reg_operand (operands[1], SFmode)
-	      && (satisfies_constraint_Sid (operands[0])
-	              || sh_satisfies_constraint_Sid_subreg_index (operands[0])))
+	      && satisfies_constraint_Sid (operands[0]))
 	    {
 	      rtx adr = XEXP (operands[0], 0);
 	      rtx base = XEXP (adr, 0);
@@ -6464,8 +6448,7 @@
 	    }
 	  if (! lra_in_progress && ! reload_completed
 	      && fp_arith_reg_operand (operands[0], SFmode)
-	      && (satisfies_constraint_Sid (operands[1])
-	              || sh_satisfies_constraint_Sid_subreg_index (operands[1])))
+	      && satisfies_constraint_Sid (operands[1]))
 	    {
 	      rtx adr = XEXP (operands[1], 0);
 	      rtx base = XEXP (adr, 0);
@@ -9183,7 +9166,7 @@
 
 (define_insn "block_lump_real"
   [(set (mem:BLK (match_operand:SI 2 "hard_reg_r4" "=r,r"))
-	   (mem:BLK (match_operand:SI 3 "hard_reg_r5" "=r,r")))
+	(mem:BLK (match_operand:SI 3 "hard_reg_r5" "=r,r")))
    (use (match_operand:SI 0 "arith_reg_operand" "r,r"))
    (use (match_operand 1 "" "Z,Ccl"))
    (use (match_operand:SI 4 "hard_reg_r6" "=r,r"))
@@ -9221,7 +9204,7 @@
 
 (define_insn "block_lump_real_i4"
   [(set (mem:BLK (match_operand:SI 2 "hard_reg_r4" "=r,r"))
-	   (mem:BLK (match_operand:SI 3 "hard_reg_r5" "=r,r")))
+	(mem:BLK (match_operand:SI 3 "hard_reg_r5" "=r,r")))
    (use (match_operand:SI 0 "arith_reg_operand" "r,r"))
    (use (match_operand 1 "" "Z,Ccl"))
    (use (match_operand:SI 4 "hard_reg_r6" "=r,r"))
