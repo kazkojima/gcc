@@ -326,6 +326,8 @@
       if (!lra_in_progress && (mode == QImode || mode == HImode)
 	  && GET_CODE (x) == PLUS
 	  && REG_P (XEXP (x, 0))
+	  && (GENERAL_REGISTER_P (REGNO (XEXP (x, 0)))
+	         || REGNO (XEXP (x, 0)) >= FIRST_PSEUDO_REGISTER)
 	  && CONST_INT_P (XEXP (x, 1)))
 	return sh_legitimate_index_p (mode, XEXP (x, 1), TARGET_SH2A, false);
 
@@ -411,6 +413,8 @@
       if (!lra_in_progress && (mode == QImode || mode == HImode)
 	  && GET_CODE (x) == PLUS
 	  && REG_P (XEXP (x, 0))
+	  && (GENERAL_REGISTER_P (REGNO (XEXP (x, 0)))
+	         || REGNO (XEXP (x, 0)) >= FIRST_PSEUDO_REGISTER)
 	  && CONST_INT_P (XEXP (x, 1)))
 	return sh_legitimate_index_p (mode, XEXP (x, 1), TARGET_SH2A, false);
 
